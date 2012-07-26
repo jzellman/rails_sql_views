@@ -17,6 +17,8 @@ module ActiveRecord # :nodoc:
       # based on. This latter object may be missing attributes; to fill
       # them in, call #reload.
       def based_on(model)
+        self.primary_key = model.primary_key
+        
         define_method("to_#{model.name.demodulize.underscore}") do
           becomes(model)
         end
@@ -41,13 +43,14 @@ module ActiveRecord # :nodoc:
               else
                 raise ArgumentError, "Unrecognized association #{association.inspect}; must be a Symbol, String, or AssociationReflection."
               end
+          foreign_key_name = (r.respond_to?(:foreign_key) ? r.foreign_key : r.primary_key_name)
           case r.macro
           when :belongs_to
-            if self.column_names.include?(r.primary_key_name.to_s)
+            if self.column_names.include? foreign_key_name.to_s
               if !r.options[:foreign_type] || self.column_names.include?(r.options[:foreign_type])
                 options = r.options.merge(
                   :class_name => r.class_name,
-                  :foreign_key => r.primary_key_name
+                  :foreign_key => foreign_key_name
                 )
                 belongs_to r.name, options
               end
@@ -56,13 +59,13 @@ module ActiveRecord # :nodoc:
             ### TODO :through assocications
             options = r.options.merge(
               :class_name => r.class_name,
-              :foreign_key => r.primary_key_name
+              :foreign_key => foreign_key_name
             )
             has_many r.name, options
           when :has_and_belongs_to_many
             options = r.options.merge(
               :class_name => r.class_name,
-              :foreign_key => r.primary_key_name,
+              :foreign_key => foreign_key_name,
               :association_foreign_key => r.association_foreign_key
             )
             has_and_belongs_to_many r.name, options
